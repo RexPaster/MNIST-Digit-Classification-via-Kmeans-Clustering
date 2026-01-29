@@ -1,0 +1,293 @@
+%% Case Study 1 Testing Code by Rex Paster & Connor Strong
+% This code sorts testing data to determine the number assigned
+% using clusters created in the
+% cs1_mnist_train_w_local_functions.m file.
+% _Note: All custom functions are defined at the bottom of this file._
+%
+% **Important:** This script requires that:
+% 1) 'centroid_labels' be established in the workspace
+% AND
+% 2) 'centroids' be established in the workspace
+% AND
+% 3) 'test' be established in the workspace
+
+%% Added Code For Convienence
+
+%Import Test & Determine Correct Labels [Solves the assumption that 'test'
+%is already defined in the workspace] (Note If Test is defined here , correct
+%labels must also be defined here as we cannot pull 'correct_labels' from a
+%fully defined 'test' as column 785 would already be zeroed out.)
+test=csvread('mnist_test_200_woutliers.csv'); %Import Test
+correctlabels = test(:,785); % Store Correct Labels From Test
+test=test(:,1:784); %Remove Correct Label Assignments from column 785
+test(:,785)=zeros(200,1); %Replace column 785 with all zeros
+
+%Load classifierdata.mat
+load("classsifierdata.mat");
+
+
+%% Create Variables
+predictions = zeros(200,1);
+outliers = zeros(200,1);
+
+%% Data Pre-Processing
+normalized_data = Normalize_Brightness(test); % Normalize the brightness of pixels in test.
+
+%% Sort Test Set Images
+% Assign test vectors to their nearest centroid
+[prediction_indexes, vec_dist_diffs] = assign_vector_to_centroid_with_two_vector_dists_diff(normalized_data, centroids);
+
+% Label each prediction
+for i = 1:200
+    predictions(i) = centroid_labels(prediction_indexes(i));
+end
+
+%% Find Outliers
+%{
+% *NOTE:* If the number of outliers is unknown, you can use the following command
+% with a tolerance to calculate how many outliers there are based on the
+% standard deviation.
+num_deviations = 1.8; % Multiplier of standard deviations
+num_outliers = identify_outliers(test, centroids, idx, vec_distance, num_deviations);
+%}
+
+% Find outliers given the known number of outliers in the dataset
+num_outliers = 11; % Number of outliers in the dataset
+
+[~, outliers_indexes] = mink(vec_dist_diffs, num_outliers);  % Finds the indexes of the n vectors that lie most equally between their two closest clusters
+
+outliers(outliers_indexes) = 1;
+
+incorrct_assignments = correctlabels ~= predictions;
+
+
+%% Create a Subplot of the Overlap Between Found Outliers & Misassigned Data
+% Stem plot of the outliers
+subplot(3,1,1);
+stema = stem(outliers);
+stema.MarkerFaceColor = 'b';    % Fill marker with blue
+xlabel('Index');
+title('Outlier Detection Stem Plot', 'FontSize', 15');
+ylim([0 1.1]);
+yticks([0 1]);
+
+% Stem plot of incorrectly sorted images
+subplot(3,1,2);
+stemb = stem(incorrct_assignments);
+stemb.MarkerFaceColor = 'b';    % Fill marker with blue
+xlabel('Index');
+title('Stem Plot of Incorrectly Sorted Images', 'FontSize', 15');
+ylim([0 1.1]);
+yticks([0 1]);
+
+% Stem plot of incorrectly sorted images marked as outliers
+subplot(3,1,3);
+stemc = stem(incorrct_assignments & outliers);
+stemc.MarkerFaceColor = 'b';    % Fill marker with blue
+xlabel('Index');
+title('Instances Where Incorrectly Sorted Images Were Also Detected as Outliers', 'FontSize', 15');
+ylim([0 1.1]);
+yticks([0 1]);
+
+%% Create a Subplot of Just the Outliers
+figure;
+stemstandalone = stem(outliers);
+stemstandalone.MarkerFaceColor = 'b';    % Fill marker with blue
+xlabel('Index');
+title('Outlier Detection Stem Plot','FontSize', 15');
+
+%% Plot Correct and Incorrect Predictions
+figure;
+plot(correctlabels,'o');
+hold on;
+plot(predictions,'x');
+
+% Create legend
+legend1 = legend(gca, {'Correct','Predicted'});
+set(legend1,...
+    'Position',[0.753305400372439 0.849412492269635 0.150418994413407 0.0584415584415583]);
+
+%Labels
+title('Predictions (All)', 'FontSize', 20');
+xlabel("Test Set Index")
+ylabel("Label")
+
+%% Plot Only Incorrect Predictions
+figure;
+plot(correctlabels(correctlabels ~= predictions),'o');
+hold on;
+plot(predictions(correctlabels ~= predictions),'x');
+
+% Create legend
+legend2 = legend(gca, {'Correct','Predicted'});
+set(legend2,...
+    'Position',[0.753305400372439 0.849412492269635 0.150418994413407 0.0584415584415583]);
+
+%Labels
+title('Predictions (Incorrect Only)', 'FontSize', 20);
+xlabel("Test Set Index")
+ylabel("Label")
+
+%% Return Accuracy & Results
+disp("Correctly Sorted Images: " + sum(correctlabels==predictions) + "/" + size(normalized_data,1))
+
+disp("Percent Accuracy " + sum(correctlabels==predictions) ./ size(normalized_data,1) .* 100)
+
+disp("Detetected Outliers Listed Below: ")
+disp(outliers_indexes')
+
+disp("Indexes of Vectors Classified as 0")
+disp(find(predictions==0)')
+
+disp("Indexes of Vectors Classified as 1")
+disp(find(predictions==1)')
+
+disp("Indexes of Vectors Classified as 2")
+disp(find(predictions==2)')
+
+disp("Indexes of Vectors Classified as 3")
+disp(find(predictions==3)')
+
+disp("Indexes of Vectors Classified as 4")
+disp(find(predictions==4)')
+
+disp("Indexes of Vectors Classified as 5")
+disp(find(predictions==5)')
+
+disp("Indexes of Vectors Classified as 6")
+disp(find(predictions==6)')
+
+disp("Indexes of Vectors Classified as 7")
+disp(find(predictions==7)')
+
+disp("Indexes of Vectors Classified as 8")
+disp(find(predictions==8)')
+
+disp("Indexes of Vectors Classified as 9")
+disp(find(predictions==9)')
+
+%% Local Functions
+%
+% **Normalize_Brightness**
+% Normalizes each vector's brightness so that its maximum value becomes 1.
+%
+% **assign_vector_to_centroid_with_two_vector_dists_diff**
+% Assign each vector to the nearest centroid and difference in distances to
+% the vectors two closest centroids.
+%
+% **update_Centroids**
+% Calculates the average distance of vectors to their
+% assigned centroid and flags vectors as outliers if their distance
+% exceeds a specified number of standard deviations from the cluster average.
+
+function normalized_data = Normalize_Brightness(data)
+    normalized_data = zeros(size(data)); 
+
+    % Loop over each vector (row) in the data
+    for vector = 1:size(data, 1)
+        % Find the maximum brightness for the current vector
+        max_brightness = max(data(vector, :));
+
+        % Normalize the vector by its maximum value
+        normalized_data(vector, :) = data(vector, :) ./ max_brightness;
+    end
+end
+
+function [index, diff_cent_distance] = assign_vector_to_centroid_with_two_vector_dists_diff(data, centroids)
+
+    datalength = length(data(:, 1)); % Save the length of the data for later
+
+    % Permute the data matrix so that its rows extend in the z-dimension
+    data = permute(data, [1, 3, 2]);
+
+    % Repeat the data matrix along the y-dimension to match the number of clusters
+    data = repmat(data, [1, length(centroids(:, 1)), 1]);
+
+    % Permute the centroids matrix so that each centroid is in a different
+    % column, and each element of the centroid is in the z-dimension
+    centroids = permute(centroids, [3, 1, 2]);
+
+    % Repeat the centroids matrix along the x-dimension to match the number of data vectors
+    centroids = repmat(centroids, [datalength, 1, 1]);
+
+    % Subtract the two matrices and take the squared norm along the z-dimension
+    sqnorm_matrix = sum((data - centroids).^2, 3);
+
+    % Find the index of the closest centroid for each vector by finding the
+    % column with the smallest norm value for each row
+    [~, index] = min(sqnorm_matrix, [], 2);
+
+    % Finds the 2 smallest centroid distances for a given vector to its
+    % nearest centroids
+    min_cent_dists = mink(sqnorm_matrix, 2, 2);
+
+    % Find the absolute value of the difference between the distances
+    % of the vector to the two closest centroids and return these distances
+    diff_cent_distance = abs(min_cent_dists(:, 1) - min_cent_dists(:, 2));
+
+end
+
+function outliers = identify_outliers(data, centroids, idx, vec_distance, STDEV_Multiplier) 
+
+    % Initialize a matrix to store cluster sums and counts
+    ClusterGrouping = zeros(size(centroids, 1), 2);
+
+    % Compute sums and counts for each cluster
+    for k = 1:size(centroids, 1)
+        for i = 1:size(data, 1)
+            if idx(i) == k
+                % If the vector belongs to cluster k, update sum and count
+                ClusterGrouping(k, 2) = ClusterGrouping(k, 2) + 1;        % Count vectors
+                ClusterGrouping(k, 1) = ClusterGrouping(k, 1) + vec_distance(i); % Sum distances
+            end
+        end
+    end
+
+    % Calculate the average distance for each cluster
+    Averages = zeros(size(ClusterGrouping, 1), 1);
+    for i = 1:size(ClusterGrouping, 1)
+        Averages(i) = ClusterGrouping(i, 1) / ClusterGrouping(i, 2);
+    end
+
+    % Initialize outlier count
+    outliers = 0;
+
+    % Loop over each cluster to compute standard deviation and identify outliers
+    for k = 1:size(centroids, 1)
+        % Compute squared differences of distances from the cluster average
+        Differences = 0;
+        for i = 1:size(data, 1)
+            if idx(i) == k
+                Differences = Differences + (vec_distance(i) - Averages(k))^2;
+            end
+        end
+
+        % Compute standard deviation for the cluster
+        SD = sqrt(Differences / ClusterGrouping(k, 2));
+
+        % Identify vectors exceeding the threshold as outliers
+        for i = 1:size(data, 1)
+            if idx(i) == k
+                Value = abs(vec_distance(i) - Averages(k));
+                if Value > STDEV_Multiplier * SD
+                    outliers = outliers + 1;
+                end
+            end
+        end
+    end
+end
+
+%% Final Notes on the Use of AI
+%
+% Artificial intelligence was used throughout the development of this code
+% in the following ways:
+% 
+% - Error Analysis: troubleshooting code and pinpointing error sources
+% - Optimization: suggesting ways to improve code speed and memory usage
+% - Comment Grammar Checking: spelling and grammar checks on comments
+% - Final Formatting Suggestions: function labeling, section header
+%   formatting tips, etc.
+%
+% Please note that all code, with the exception of minimal single-line
+% statements, was written by Rex Paster or Connor Strong, and is not a
+% regurgitation of AI.
